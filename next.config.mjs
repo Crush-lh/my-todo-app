@@ -1,11 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  serverActions: {
-    allowedOrigins: [
-      'my-todo-app-git-main-cru-sh-s-projects.vercel.app',
-      'lihan.rangzijigenghao.site',
-    ],
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        'my-todo-app-git-main-cru-sh-s-projects.vercel.app',
+        'lihan.rangzijigenghao.site',
+      ],
+    },
   },
 };
 
