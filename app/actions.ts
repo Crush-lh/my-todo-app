@@ -2,8 +2,16 @@
 'use server'
 
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { Todo } from '@/types/todo'
 import { revalidatePath } from 'next/cache'
+
+function getSimpleClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 export async function getTodos(): Promise<Todo[]> {
   const supabase = await createServerSupabaseClient()
@@ -26,22 +34,26 @@ export async function addTodo(title: string, description?: string): Promise<{ su
     return { success: false, error: '标题不能为空' }
   }
   
-  const supabase = await createServerSupabaseClient()
-  
-  const { error } = await supabase
-    .from('todos')
-    .insert([{ title: title.trim(), description: description?.trim() || null, completed: false }])
-  
-  if (error) {
-    console.error('添加待办失败:', error)
-    return { success: false, error: '添加失败，请重试' }
+  try {
+    const supabase = getSimpleClient()
+    const { error } = await supabase
+      .from('todos')
+      .insert([{ title: title.trim(), completed: false }])
+    
+    if (error) {
+      console.error('添加待办失败:', error)
+      return { success: false, error: '添加失败: ' + error.message }
+    }
+    
+    revalidatePath('/')
+    return { success: true }
+  } catch (e: any) {
+    console.error('添加待办异常:', e)
+    return { success: false, error: '添加异常: ' + (e?.message || String(e)) }
   }
-  
-  revalidatePath('/')
-  return { success: true }
 }
 
-export async function toggleTodo(id: number, completed: boolean): Promise<{ success: boolean }> {
+export async function toggleTodo(id: string, completed: boolean): Promise<{ success: boolean }> {
   const supabase = await createServerSupabaseClient()
   
   const { error } = await supabase
@@ -58,7 +70,7 @@ export async function toggleTodo(id: number, completed: boolean): Promise<{ succ
   return { success: true }
 }
 
-export async function deleteTodo(id: number): Promise<{ success: boolean }> {
+export async function deleteTodo(id: string): Promise<{ success: boolean }> {
   const supabase = await createServerSupabaseClient()
   
   const { error } = await supabase
@@ -75,7 +87,7 @@ export async function deleteTodo(id: number): Promise<{ success: boolean }> {
   return { success: true }
 }
 
-export async function updateTodo(id: number, title: string, description?: string): Promise<{ success: boolean; error?: string }> {
+export async function updateTodo(id: string, title: string, description?: string): Promise<{ success: boolean; error?: string }> {
   if (!title.trim()) {
     return { success: false, error: '标题不能为空' }
   }
@@ -84,7 +96,7 @@ export async function updateTodo(id: number, title: string, description?: string
   
   const { error } = await supabase
     .from('todos')
-    .update({ title: title.trim(), description: description?.trim() || null })
+    .update({ title: title.trim() })
     .eq('id', id)
   
   if (error) {
