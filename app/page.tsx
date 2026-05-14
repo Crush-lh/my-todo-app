@@ -7,7 +7,7 @@ export default async function Home() {
 
   return (
     <main className="container">
-      <h1>待办清单</h1>
+      <h1>待办清单 <small style={{fontSize:'0.5em',color:'#999'}}>v20250514-1955</small></h1>
       <AddTodoForm />
       
       <div className="stats">

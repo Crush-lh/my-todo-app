@@ -33,6 +33,7 @@ export default function AddTodoForm() {
       <div className="form-row">
         <input
           type="text"
+          name="title"
           placeholder="输入待办事项..."
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -45,6 +46,7 @@ export default function AddTodoForm() {
       </div>
       <input
         type="text"
+        name="description"
         placeholder="描述（可选）"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
