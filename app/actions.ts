@@ -6,11 +6,11 @@ import { createClient } from '@supabase/supabase-js'
 import { Todo } from '@/types/todo'
 import { revalidatePath } from 'next/cache'
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xjawmygajknjlansmzyp.supabase.co'
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable__tQUqUZR0WHMqoc6R2jWtQ_ClYYea2a'
+
 function getSimpleClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 }
 
 export async function getTodos(): Promise<Todo[]> {
@@ -29,27 +29,40 @@ export async function getTodos(): Promise<Todo[]> {
   return data || []
 }
 
-export async function addTodo(title: string, description?: string): Promise<{ success: boolean; error?: string }> {
+export async function addTodo(title: string, description?: string, category?: string): Promise<{ success: boolean; error?: string }> {
   if (!title.trim()) {
     return { success: false, error: '标题不能为空' }
   }
   
   try {
     const supabase = getSimpleClient()
-    const { error } = await supabase
+    
+    const insertData: any = { 
+      title: title.trim(), 
+      completed: false 
+    }
+    if (description?.trim()) {
+      insertData.description = description.trim()
+    }
+    if (category?.trim()) {
+      insertData.category = category.trim()
+    }
+    
+    const { data, error } = await supabase
       .from('todos')
-      .insert([{ title: title.trim(), completed: false }])
+      .insert([insertData])
+      .select()
     
     if (error) {
-      console.error('添加待办失败:', error)
-      return { success: false, error: '添加失败: ' + error.message }
+      console.error('Supabase insert 失败:', error)
+      return { success: false, error: '数据库写入失败: ' + (error.message || JSON.stringify(error)) }
     }
     
     revalidatePath('/')
     return { success: true }
   } catch (e: any) {
-    console.error('添加待办异常:', e)
-    return { success: false, error: '添加异常: ' + (e?.message || String(e)) }
+    console.error('addTodo 异常:', e)
+    return { success: false, error: '服务端异常: ' + (e?.message || e?.toString?.() || String(e)) }
   }
 }
 
@@ -87,16 +100,24 @@ export async function deleteTodo(id: string): Promise<{ success: boolean }> {
   return { success: true }
 }
 
-export async function updateTodo(id: string, title: string, description?: string): Promise<{ success: boolean; error?: string }> {
+export async function updateTodo(id: string, title: string, description?: string, category?: string): Promise<{ success: boolean; error?: string }> {
   if (!title.trim()) {
     return { success: false, error: '标题不能为空' }
   }
   
   const supabase = await createServerSupabaseClient()
   
+  const updateData: any = { title: title.trim() }
+  if (description !== undefined) {
+    updateData.description = description.trim() || null
+  }
+  if (category !== undefined) {
+    updateData.category = category.trim() || null
+  }
+  
   const { error } = await supabase
     .from('todos')
-    .update({ title: title.trim() })
+    .update(updateData)
     .eq('id', id)
   
   if (error) {

@@ -4,10 +4,28 @@ import { useState } from 'react'
 import { Todo } from '@/types/todo'
 import { toggleTodo, deleteTodo, updateTodo } from '../actions'
 
+const CATEGORIES = [
+  { value: '', label: '无分类' },
+  { value: '工作', label: '💼 工作' },
+  { value: '学习', label: '📚 学习' },
+  { value: '生活', label: '🏠 生活' },
+]
+
+function CategoryTag({ category }: { category?: string }) {
+  if (!category) return null
+  const map: Record<string, string> = {
+    '工作': 'tag tag-work',
+    '学习': 'tag tag-study',
+    '生活': 'tag tag-life',
+  }
+  return <span className={map[category] || 'tag'}>{category}</span>
+}
+
 export default function TodoItem({ todo }: { todo: Todo }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(todo.title)
   const [editDesc, setEditDesc] = useState(todo.description || '')
+  const [editCategory, setEditCategory] = useState(todo.category || '')
   const [isDeleting, setIsDeleting] = useState(false)
 
   async function handleToggle() {
@@ -21,7 +39,7 @@ export default function TodoItem({ todo }: { todo: Todo }) {
   }
 
   async function handleUpdate() {
-    const result = await updateTodo(todo.id, editTitle, editDesc)
+    const result = await updateTodo(todo.id, editTitle, editDesc, editCategory || undefined)
     if (result.success) {
       setIsEditing(false)
     }
@@ -43,6 +61,15 @@ export default function TodoItem({ todo }: { todo: Todo }) {
           className="input"
           placeholder="描述"
         />
+        <select
+          value={editCategory}
+          onChange={(e) => setEditCategory(e.target.value)}
+          className="input category-select"
+        >
+          {CATEGORIES.map(c => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
         <div className="actions">
           <button onClick={handleUpdate} className="btn-small btn-primary">保存</button>
           <button onClick={() => setIsEditing(false)} className="btn-small">取消</button>
@@ -54,14 +81,20 @@ export default function TodoItem({ todo }: { todo: Todo }) {
   return (
     <div className={`todo-item ${todo.completed ? 'completed' : ''}`}>
       <div className="todo-content">
-        <input
-          type="checkbox"
-          checked={todo.completed}
-          onChange={handleToggle}
-          className="checkbox"
-        />
+        <div className="checkbox-wrapper">
+          <input
+            type="checkbox"
+            checked={todo.completed}
+            onChange={handleToggle}
+            className="checkbox"
+          />
+          <div className="checkbox-custom"></div>
+        </div>
         <div className="todo-text">
-          <span className="todo-title">{todo.title}</span>
+          <div className="todo-header">
+            <span className="todo-title">{todo.title}</span>
+            <CategoryTag category={todo.category} />
+          </div>
           {todo.description && <span className="todo-desc">{todo.description}</span>}
         </div>
       </div>

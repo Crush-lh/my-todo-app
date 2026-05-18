@@ -3,9 +3,17 @@
 import { useState } from 'react'
 import { addTodo } from '../actions'
 
+const CATEGORIES = [
+  { value: '', label: '选择分类（可选）' },
+  { value: '工作', label: '💼 工作' },
+  { value: '学习', label: '📚 学习' },
+  { value: '生活', label: '🏠 生活' },
+]
+
 export default function AddTodoForm() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [category, setCategory] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -16,13 +24,20 @@ export default function AddTodoForm() {
     setIsSubmitting(true)
     setError('')
 
-    const result = await addTodo(title, description)
-
-    if (result.success) {
-      setTitle('')
-      setDescription('')
-    } else {
-      setError(result.error || '添加失败')
+    try {
+      const result = await addTodo(title, description || undefined, category || undefined)
+      console.log('addTodo result:', result)
+      if (result.success) {
+        setTitle('')
+        setDescription('')
+        setCategory('')
+        window.location.reload()
+      } else {
+        setError(result.error || '添加失败，请重试')
+      }
+    } catch (e: any) {
+      console.error('addTodo exception:', e)
+      setError('添加异常: ' + (e?.message || String(e)))
     }
 
     setIsSubmitting(false)
@@ -40,6 +55,16 @@ export default function AddTodoForm() {
           className="input"
           disabled={isSubmitting}
         />
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="input category-select"
+          disabled={isSubmitting}
+        >
+          {CATEGORIES.map(c => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
         <button type="submit" disabled={isSubmitting} className="btn-primary">
           {isSubmitting ? '添加中...' : '添加'}
         </button>
