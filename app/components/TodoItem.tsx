@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Todo } from '@/types/todo'
 import { toggleTodo, deleteTodo, updateTodo } from '../actions'
+import { autoCategorize } from '@/lib/category'
 
 const CATEGORIES = [
   { value: '', label: '无分类' },
@@ -39,7 +40,9 @@ export default function TodoItem({ todo }: { todo: Todo }) {
   }
 
   async function handleUpdate() {
-    const result = await updateTodo(todo.id, editTitle, editDesc, editCategory || undefined)
+    // 编辑时重新自动分类
+    const autoCategory = autoCategorize(editTitle, editDesc)
+    const result = await updateTodo(todo.id, editTitle, editDesc, autoCategory || undefined)
     if (result.success) {
       setIsEditing(false)
     }
@@ -61,15 +64,19 @@ export default function TodoItem({ todo }: { todo: Todo }) {
           className="input"
           placeholder="描述"
         />
-        <select
-          value={editCategory}
-          onChange={(e) => setEditCategory(e.target.value)}
-          className="input category-select"
-        >
-          {CATEGORIES.map(c => (
-            <option key={c.value} value={c.value}>{c.label}</option>
-          ))}
-        </select>
+        {/* 自动分类提示 */}
+        {(() => {
+          const autoCat = autoCategorize(editTitle, editDesc)
+          if (autoCat) {
+            return (
+              <div className="auto-category-hint">
+                <span className="hint-label">🤖 自动分类：</span>
+                <span className={`tag tag-${autoCat.toLowerCase()}`}>{autoCat}</span>
+              </div>
+            )
+          }
+          return null
+        })()}
         <div className="actions">
           <button onClick={handleUpdate} className="btn-small btn-primary">保存</button>
           <button onClick={() => setIsEditing(false)} className="btn-small">取消</button>

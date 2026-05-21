@@ -5,6 +5,7 @@ import { createServerSupabaseClient } from '@/lib/supabase'
 import { createClient } from '@supabase/supabase-js'
 import { Todo } from '@/types/todo'
 import { revalidatePath } from 'next/cache'
+import { autoCategorize } from '@/lib/category'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xjawmygajknjlansmzyp.supabase.co'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable__tQUqUZR0WHMqoc6R2jWtQ_ClYYea2a'
@@ -29,13 +30,16 @@ export async function getTodos(): Promise<Todo[]> {
   return data || []
 }
 
-export async function addTodo(title: string, description?: string, category?: string): Promise<{ success: boolean; error?: string }> {
+export async function addTodo(title: string, description?: string, category?: string, priority?: string): Promise<{ success: boolean; error?: string; category?: string | null }> {
   if (!title.trim()) {
     return { success: false, error: '标题不能为空' }
   }
   
   try {
     const supabase = getSimpleClient()
+    
+    // 自动分类：如果没有手动指定分类，则自动识别
+    const autoCategory = category?.trim() || autoCategorize(title, description)
     
     const insertData: any = { 
       title: title.trim(), 
@@ -44,8 +48,11 @@ export async function addTodo(title: string, description?: string, category?: st
     if (description?.trim()) {
       insertData.description = description.trim()
     }
-    if (category?.trim()) {
-      insertData.category = category.trim()
+    if (autoCategory) {
+      insertData.category = autoCategory
+    }
+    if (priority?.trim()) {
+      insertData.priority = priority.trim()
     }
     
     const { data, error } = await supabase
@@ -59,7 +66,7 @@ export async function addTodo(title: string, description?: string, category?: st
     }
     
     revalidatePath('/')
-    return { success: true }
+    return { success: true, category: autoCategory }
   } catch (e: any) {
     console.error('addTodo 异常:', e)
     return { success: false, error: '服务端异常: ' + (e?.message || e?.toString?.() || String(e)) }
@@ -100,7 +107,7 @@ export async function deleteTodo(id: string): Promise<{ success: boolean }> {
   return { success: true }
 }
 
-export async function updateTodo(id: string, title: string, description?: string, category?: string): Promise<{ success: boolean; error?: string }> {
+export async function updateTodo(id: string, title: string, description?: string, category?: string, priority?: string): Promise<{ success: boolean; error?: string }> {
   if (!title.trim()) {
     return { success: false, error: '标题不能为空' }
   }
@@ -113,6 +120,9 @@ export async function updateTodo(id: string, title: string, description?: string
   }
   if (category !== undefined) {
     updateData.category = category.trim() || null
+  }
+  if (priority !== undefined) {
+    updateData.priority = priority.trim() || null
   }
   
   const { error } = await supabase
